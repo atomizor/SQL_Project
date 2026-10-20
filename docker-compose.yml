@@ -1,0 +1,30 @@
+services:
+  # 1. The core PostgreSQL Database Engine service
+  pagila_db:
+    image: postgres:15-alpine
+    container_name: pagila_postgres_server
+    environment:
+      POSTGRES_USER: dvd_store 
+      POSTGRES_PASSWORD: 12345678
+      POSTGRES_DB: pagila_db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dvd_store -d pagila_db"]
+      interval: 10s       
+      timeout: 5s         
+      retries: 6          
+      start_period: 15s   
+
+  # 2. The Automated Data Injector runner
+  data_loader:
+    image: postgres:15-alpine
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    depends_on:
+      pagila_db:
+        condition: service_healthy
+    command: sh -c "psql -h pagila_db -U dvd_store -d pagila_db < pagila.sql"
+    environment:
+      PGPASSWORD: 12345678
